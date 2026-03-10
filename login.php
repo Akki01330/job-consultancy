@@ -1,10 +1,10 @@
 <?php
 require_once '../config.php';
-$pageTitle = 'Recruiter Login';
+$pageTitle = 'Job Seeker Login';
 
 // If already logged in, redirect
-if (isLoggedIn() && hasRole('recruiter')) {
-    redirect(APP_URL . '/recruiter');
+if (isLoggedIn() && hasRole('jobseeker')) {
+    redirect(APP_URL . '/jobseeker');
 }
 
 $errors = [];
@@ -24,30 +24,30 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     
     if (empty($errors)) {
         // Query database with prepared statement
-        $stmt = $conn->prepare("SELECT id, company_name, password, is_verified, is_active FROM recruiters WHERE username = ?");
+        $stmt = $conn->prepare("SELECT id, first_name, password, is_active FROM job_seekers WHERE username = ?");
         $stmt->bind_param("s", $username);
         $stmt->execute();
         $result = $stmt->get_result();
         
         if ($result->num_rows > 0) {
-            $recruiter = $result->fetch_assoc();
+            $user = $result->fetch_assoc();
             
-            if (!$recruiter['is_verified']) {
-                $errors[] = 'Your account is pending admin verification';
-            } elseif (!$recruiter['is_active']) {
-                $errors[] = 'Your account has been disabled';
-            } elseif (verifyPassword($password, $recruiter['password'])) {
-                // Login successful
-                $_SESSION['user_id'] = $recruiter['id'];
-                $_SESSION['user_type'] = 'recruiter';
-                $_SESSION['user_name'] = $recruiter['company_name'];
-                
-                $_SESSION['message'] = 'Welcome back!';
-                $_SESSION['message_type'] = 'success';
-                
-                redirect(APP_URL . '/recruiter');
+            if ($user['is_active']) {
+                if (verifyPassword($password, $user['password'])) {
+                    // Login successful
+                    $_SESSION['user_id'] = $user['id'];
+                    $_SESSION['user_type'] = 'jobseeker';
+                    $_SESSION['user_name'] = $user['first_name'];
+                    
+                    $_SESSION['message'] = 'Welcome back, ' . $user['first_name'] . '!';
+                    $_SESSION['message_type'] = 'success';
+                    
+                    redirect(APP_URL . '/jobseeker');
+                } else {
+                    $errors[] = 'Invalid password';
+                }
             } else {
-                $errors[] = 'Invalid password';
+                $errors[] = 'Your account has been disabled';
             }
         } else {
             $errors[] = 'Username not found';
@@ -65,7 +65,7 @@ include("../includes/header.php");
         <div class="col-md-5">
             <div class="card">
                 <div class="card-header">
-                    <h4 class="card-title mb-0"><i class="fas fa-building"></i> Recruiter Login</h4>
+                    <h4 class="card-title mb-0"><i class="fas fa-user-tie"></i> Job Seeker Login</h4>
                 </div>
                 <div class="card-body">
                     <?php if (!empty($errors)): ?>
@@ -101,7 +101,7 @@ include("../includes/header.php");
                     
                     <p class="text-center mb-2">
                         Don't have an account? 
-                        <a href="<?php echo APP_URL; ?>/recruiter/register.php">Register here</a>
+                        <a href="<?php echo APP_URL; ?>/jobseeker/register.php">Register here</a>
                     </p>
                     <p class="text-center">
                         <a href="<?php echo APP_URL; ?>">Back to Home</a>
